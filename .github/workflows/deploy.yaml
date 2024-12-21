@@ -1,0 +1,54 @@
+name: Deploy Frontend Infrastructure
+on:
+  workflow_dispatch:  
+  push:
+    branches: 
+      - main
+      - dev
+    paths:
+      - 'templates/**'  
+
+jobs:
+  validate:
+    name: Validate Templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate CloudFormation Template
+        run: |
+          aws cloudformation validate-template \
+            --template-body file://templates/main.yaml
+
+  deploy:
+    name: Deploy Infrastructure
+    needs: validate  
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}  
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy CloudFormation Stack
+        uses: aws-actions/aws-cloudformation-github-deploy@v1
+        with:
+          name: frontend-infra-${{ github.ref_name }}
+          template: templates/main.yml
+          no-fail-on-empty-changeset: "1"
+          parameter-overrides: |
+            Environment=${{ github.ref_name }},
+            Project=solutions-poc-frontend,
+            BucketPrefix=cparionaf

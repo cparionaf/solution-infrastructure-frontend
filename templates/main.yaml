@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Frontend infrastructure with Blue-Green deployment strategy'
+
+Parameters:
+  Environment:
+    Description: 'Allowed environment names are: dev, qa, stg, prod'
+    AllowedValues: [dev, qa, stg, prod]
+    Type: String
+  
+  Proj:
+    Description: 'Project name in lowercase'
+    Type: String
+  
+  DomainName:
+    Description: 'Domain name for the CloudFront distribution'
+    Type: String
+
+  ActiveEnvironment:
+    Description: 'Currently active environment (blue or green)'
+    Type: String
+    AllowedValues: [blue, green]
+    Default: blue
+
+Conditions:
+  IsProd: !Equals [!Ref Environment, 'prod']
+  IsBlueActive: !Equals [!Ref ActiveEnvironment, 'blue']
+
+Resources:
+  # Bucket Blue
+  BlueBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub '${Proj}-${Environment}-frontend-blue-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # Bucket Green
+  GreenBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub '${Proj}-${Environment}-frontend-green-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # Blue Bucket Policy
+  BlueBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BlueBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub 'arn:aws:s3:::${BlueBucket}/*'
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}'
+
+  # Green Bucket Policy
+  GreenBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref GreenBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub 'arn:aws:s3:::${GreenBucket}/*'
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}'
+
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${Proj}-${Environment}-OAC'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # WAF Web ACL (solo para producción)
+  ProductionWebACL:
+    Type: AWS::WAFv2::WebACL
+    Condition: IsProd
+    Properties:
+      Name: !Sub '${Proj}-${Environment}-webacl'
+      Scope: CLOUDFRONT
+      DefaultAction:
+        Allow: {}
+      Rules:
+        - Name: AWSManagedRulesCommonRuleSet
+          Priority: 1
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSManagedRulesCommonRuleSetMetric
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !If 
+              - IsBlueActive
+              - !GetAtt BlueBucket.RegionalDomainName
+              - !GetAtt GreenBucket.RegionalDomainName
+            Id: S3Origin
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+            S3OriginConfig: {}
+        Aliases: !If 
+          - IsProd
+          - [!Ref DomainName]
+          - [!Sub '${Environment}.${DomainName}']
+        Enabled: true
+        DefaultRootObject: index.html
+        HttpVersion: http2
+        Comment: !Sub 'CloudFront Distribution for ${Proj}-${Environment} (${ActiveEnvironment})'
+        WebACLId: !If [IsProd, !GetAtt ProductionWebACL.Arn, !Ref 'AWS::NoValue']
+        PriceClass: !If [IsProd, 'PriceClass_All', 'PriceClass_100']
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+        ViewerCertificate:
+          AcmCertificateArn: !ImportValue 'CertificateArn'
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponsePagePath: /index.html
+            ResponseCode: 200
+          - ErrorCode: 404
+            ResponsePagePath: /index.html
+            ResponseCode: 200
+
+Outputs:
+  ActiveBucketName:
+    Description: 'Name of the currently active bucket'
+    Value: !If [IsBlueActive, !Ref BlueBucket, !Ref GreenBucket]
+    Export:
+      Name: !Sub '${AWS::StackName}-ActiveBucket'
+
+  StandbyBucketName:
+    Description: 'Name of the standby bucket'
+    Value: !If [IsBlueActive, !Ref GreenBucket, !Ref BlueBucket]
+    Export:
+      Name: !Sub '${AWS::StackName}-StandbyBucket'
+
+  CloudFrontDistributionId:
+    Description: 'ID of the CloudFront distribution'
+    Value: !Ref CloudFrontDistribution
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudFrontId'
+
+  CloudFrontDomain:
+    Description: 'Domain name of the CloudFront distribution'
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudFrontDomain'
+
+  ActiveEnvironmentColor:
+    Description: 'Currently active environment color'
+    Value: !Ref ActiveEnvironment
+    Export:
+      Name: !Sub '${AWS::StackName}-ActiveColor'
