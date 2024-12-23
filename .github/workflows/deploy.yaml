@@ -23,7 +23,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{vars.AWS_ENVIRONMENT}}  # O la región que necesites
+          aws-region: ${{vars.AWS_ENVIRONMENT}} 
           audience: sts.amazonaws.com
 
       - name: Validate CloudFormation Template
