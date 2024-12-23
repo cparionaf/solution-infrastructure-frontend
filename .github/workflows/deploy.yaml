@@ -1,12 +1,13 @@
 name: Deploy Frontend Infrastructure
+
 on:
   workflow_dispatch:
   push:
     branches: 
       - main
       - dev
-    # paths:
-    #   - 'templates/**'
+    paths:
+      - 'templates/**'
 
 jobs:
   validate:
@@ -18,6 +19,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          audience: sts.amazonaws.com
+      
+      - name: Validate CloudFormation Template
+        run: |
+          aws cloudformation validate-template \
+            --template-body file://templates/main.yaml
 
   deploy:
     name: Deploy Infrastructure
@@ -34,7 +47,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }} 
+          aws-region: ${{ vars.AWS_REGION }}
           audience: sts.amazonaws.com
 
       - name: Deploy CloudFormation Stack
@@ -46,4 +59,4 @@ jobs:
           parameter-overrides: |
             Environment=${{ github.ref_name }},
             Proj=solutions-poc-frontend,
-            DomainName=${{ vars.DOMAIN_NAME }}, 
+            DomainName=${{ vars.DOMAIN_NAME }}
