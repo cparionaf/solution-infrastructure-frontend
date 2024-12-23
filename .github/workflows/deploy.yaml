@@ -12,6 +12,10 @@ jobs:
   validate:
     name: Validate Templates
     runs-on: ubuntu-latest
+    # Añadimos los permisos necesarios para OIDC
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -19,7 +23,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{vars.AWS_ENVIRONMENT}}  # O la región que necesites
+          audience: sts.amazonaws.com
 
       - name: Validate CloudFormation Template
         run: |
@@ -31,6 +36,10 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
+    # También necesitamos los permisos aquí
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -38,7 +47,8 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{vars.AWS_ENVIRONMENT}} 
+          audience: sts.amazonaws.com
 
       - name: Deploy CloudFormation Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v1
