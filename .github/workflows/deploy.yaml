@@ -12,19 +12,12 @@ jobs:
   validate:
     name: Validate Templates
     runs-on: ubuntu-latest
-    # Añadimos los permisos necesarios para OIDC
     permissions:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }} 
-          audience: sts.amazonaws.com
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Validate CloudFormation Template
         run: |
