@@ -47,4 +47,3 @@ jobs:
             Environment=${{ github.ref_name }},
             Proj=solutions-poc-frontend,
             DomainName=${{ vars.DOMAIN_NAME }},
-            ActiveEnvironment=${{ vars.ACTIVE_COLOR || 'blue' }} 
