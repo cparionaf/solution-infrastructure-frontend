@@ -4,7 +4,7 @@ Description: 'Frontend infrastructure with Blue-Green deployment strategy'
 Parameters:
   Environment:
     Description: 'Allowed environment names are: dev, qa, stg, prod'
-    AllowedValues: [dev, qa, stg, prod]
+    AllowedValues: [dev, prod]
     Type: String
   
   Proj:
