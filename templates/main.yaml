@@ -149,10 +149,10 @@ Resources:
           Compress: true
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
         ViewerCertificate:
-        AcmCertificateArn: !If 
-          - IsDevEnvironment
-          - arn:aws:acm:us-east-1:009160045464:certificate/c776ae7c-58a3-4e43-a907-a212f9496bb3
-          - arn:aws:acm:us-east-1:009160044639:certificate/28adc530-04a9-405c-af96-996043c671ac
+          AcmCertificateArn: !If 
+            - IsProd
+            - arn:aws:acm:us-east-1:009160044639:certificate/28adc530-04a9-405c-af96-996043c671ac
+            - arn:aws:acm:us-east-1:009160045464:certificate/c776ae7c-58a3-4e43-a907-a212f9496bb3
           SslSupportMethod: sni-only
           MinimumProtocolVersion: TLSv1.2_2021
         CustomErrorResponses:
