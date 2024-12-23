@@ -46,4 +46,4 @@ jobs:
           parameter-overrides: |
             Environment=${{ github.ref_name }},
             Proj=solutions-poc-frontend,
-            DomainName=${{ vars.DOMAIN_NAME }},
+            DomainName=${{ vars.DOMAIN_NAME }}, 
