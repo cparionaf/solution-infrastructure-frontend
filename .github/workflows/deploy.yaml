@@ -19,6 +19,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate CloudFormation Template
+        run: |
+          aws cloudformation validate-template \
+            --template-body file://templates/main.yaml
+
   deploy:
     name: Deploy Infrastructure
     needs: validate
@@ -41,7 +46,7 @@ jobs:
         uses: aws-actions/aws-cloudformation-github-deploy@v1
         with:
           name: frontend-infra-${{ github.ref_name }}
-          template: templates/main.yml
+          template: templates/main.yaml
           no-fail-on-empty-changeset: "1"
           parameter-overrides: |
             Environment=${{ github.ref_name }},
