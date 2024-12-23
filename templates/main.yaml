@@ -3,8 +3,7 @@ Description: 'Project resources for CloudFront and S3'
 
 Parameters:
   Environment:
-    Description: 'Allowed environment names are: dev, qa, stg, prod'
-    AllowedValues: [dev, qa, stg, prod]
+    Description: 'Allowed environment names are: dev, prod'
     Type: String
   
   Proj:
@@ -130,4 +129,4 @@ Outputs:
     Description: 'ID of the CloudFront distribution'
     Value: !Ref CloudFrontDistribution
     Export:
-      Name: !Sub '${AWS::StackName}-CloudFrontId'
+      Name: !Sub '${AWS::StackName}-CloudFrontId' 
