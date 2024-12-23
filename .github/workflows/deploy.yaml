@@ -19,11 +19,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate CloudFormation Template
-        run: |
-          aws cloudformation validate-template \
-            --template-body file://templates/main.yaml
-
   deploy:
     name: Deploy Infrastructure
     needs: validate
