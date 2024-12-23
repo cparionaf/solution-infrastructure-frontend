@@ -23,7 +23,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{vars.AWS_REGION}} 
+          aws-region: ${{ vars.AWS_REGION }} 
           audience: sts.amazonaws.com
 
       - name: Validate CloudFormation Template
@@ -36,7 +36,6 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
-    # También necesitamos los permisos aquí
     permissions:
       id-token: write
       contents: read
@@ -47,7 +46,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{vars.AWS_REGION}} 
+          aws-region: ${{ vars.AWS_REGION }} 
           audience: sts.amazonaws.com
 
       - name: Deploy CloudFormation Stack
