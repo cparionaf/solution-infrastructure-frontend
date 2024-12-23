@@ -45,6 +45,6 @@ jobs:
           no-fail-on-empty-changeset: "1"
           parameter-overrides: |
             Environment=${{ github.ref_name }},
-            Project=solutions-poc-frontend,
+            Proj=solutions-poc-frontend,
             DomainName=${{ vars.DOMAIN_NAME }},
             ActiveEnvironment=${{ vars.ACTIVE_COLOR || 'blue' }} 
