@@ -5,8 +5,8 @@ on:
     branches: 
       - main
       - dev
-    paths:
-      - 'templates/**'
+    # paths:
+    #   - 'templates/**'
 
 jobs:
   validate:
